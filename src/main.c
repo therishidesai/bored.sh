@@ -2,40 +2,67 @@
 #include <stdlib.h>
 #include <string.h>
 
-int main() {
-  char* whitespace = " \t\v\f\r\n";
-  char* buffer;
-  size_t bufsize = 1;
-  size_t characters;
+struct cmd {
+    int size;
+    char** cmds;
+};
 
-  buffer = (char* )malloc(bufsize * sizeof(char));
-  if (buffer == NULL) {
+char* read_line() {
+    char* buffer;
+    size_t bufsize = 32;
+    size_t characters;
+
+    buffer = (char* )malloc(bufsize * sizeof(char));
+    if (buffer == NULL) {
 	perror("Unable to allocate buffer");
 	exit(1);
-  }
+    }
 
-  printf("Type something: ");
-  characters = getline(&buffer,&bufsize,stdin);
-  printf("%zu characters were read.\n",characters);
-  printf("You typed: '%s'\n",buffer);
-  printf("size: %lu \n", sizeof(buffer));
+    printf("bored.sh> ");
+    getline(&buffer,&bufsize,stdin);
 
-  char* ptr = strtok(buffer, whitespace);
-  char** ptrs = malloc(bufsize * sizeof(char*));
-  int i = 0;
-  while (ptr != NULL) {
-	printf("%s\n", ptr);
+    return buffer;
+}
+
+struct cmd split_line(char* buffer) {
+    char* whitespace = " \t\v\f\r\n";
+    int bufsize = 1;
+    char* ptr = strtok(buffer, whitespace);
+    char** ptrs = malloc(bufsize * sizeof(char*));
+    int i = 0;
+    while (ptr != NULL) {
 	ptrs[i] = ptr;
 	i++;
+	if (i >= bufsize) {
+	    bufsize += bufsize;
+	    //char** old_ptrs = ptrs;
+	    ptrs = realloc(ptrs, bufsize * sizeof(char*));
+	    /*if (!ptrs) {
+		free(x)
+		}*/
+	}
 	ptr = strtok(NULL, whitespace);
-  }
+    }
 
-  printf("%lu \n", sizeof(char**));
+    struct cmd line = {i, ptrs};
+    return line;
+}
 
-  for (int n = 0; n < i; n++) {
-	printf("%s\n", ptrs[n]);
-  }
-
-  return(0);
+int main() {
+    while (1) {
+	char* line = read_line();
+	if (*line == 0 || *line == EOF) {
+	    printf("exit\n");
+	    break;
+	} else if (strcmp(line, "exit\n") == 0) {
+	    break;
+	}
+	struct cmd command = split_line(line);
+	printf("%d \n", command.size);
+	for (int n = 0; n < command.size; n++) {
+	    printf("%s\n", command.cmds[n]);
+	}
+    }
+    return(0);
 }
 
