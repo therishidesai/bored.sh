@@ -1,6 +1,10 @@
-#include <stdio.h>
+#include <unistd.h>
 #include <stdlib.h>
+#include <stdio.h>
 #include <string.h>
+
+#include <sys/types.h>
+#include <sys/wait.h>
 
 struct cmd {
     int size;
@@ -35,17 +39,37 @@ struct cmd split_line(char* buffer) {
 	i++;
 	if (i >= bufsize) {
 	    bufsize += bufsize;
-	    //char** old_ptrs = ptrs;
 	    ptrs = realloc(ptrs, bufsize * sizeof(char*));
-	    /*if (!ptrs) {
-		free(x)
-		}*/
 	}
 	ptr = strtok(NULL, whitespace);
     }
 
+    ptrs[i] = NULL;
+    i++;
     struct cmd line = {i, ptrs};
     return line;
+}
+
+pid_t run_command(char** cmds) {
+    pid_t c_pid, pid;
+    int status;
+
+    c_pid = fork();
+
+    if (c_pid == 0){
+	execvp(cmds[0], cmds);
+	perror("execve failed");
+    }else if (c_pid > 0){
+	if( (pid = wait(&status)) < 0){
+	    perror("wait");
+	    _exit(1);
+	}
+    }else{
+	perror("fork failed");
+	_exit(1);
+    }
+
+    return c_pid;
 }
 
 int main() {
@@ -58,10 +82,8 @@ int main() {
 	    break;
 	}
 	struct cmd command = split_line(line);
-	printf("%d \n", command.size);
-	for (int n = 0; n < command.size; n++) {
-	    printf("%s\n", command.cmds[n]);
-	}
+	pid_t pid = run_command(command.cmds);
+	
     }
     return(0);
 }
